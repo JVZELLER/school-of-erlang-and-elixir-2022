@@ -1,0 +1,263 @@
+# Exercises
+
+## FizzBuzz
+
+Write a function that returns the numbers from 1 to `n`.
+But for multiples of:
+
+* three replaces a number with an atom `:fizz` instead of the number
+* five replaces a number with an atom `:buzz`
+* both three and five replaces a number with an atom `:fizzbuzz`.
+
+Tip: see [How to use `div/2` and/or `rem/2`?](https://elixir-lang.org/getting-started/basic-types.html#basic-arithmetic)
+
+```elixir
+defmodule FizzBuzz do
+  def fizzbuzz(0), do: []
+
+  def fizzbuzz(n) do
+    Enum.map(1..n, &get_number(&1, rem(&1, 3), rem(&1, 5)))
+  end
+
+  def get_number(_number, 0, 0), do: :fizzbuzz
+  def get_number(_number, 0, _), do: :fizz
+  def get_number(_number, _, 0), do: :buzz
+  def get_number(number, _, _), do: number
+end
+```
+
+```elixir
+[] = FizzBuzz.fizzbuzz(0)
+[1] = FizzBuzz.fizzbuzz(1)
+[1, 2] = FizzBuzz.fizzbuzz(2)
+[1, 2, :fizz] = FizzBuzz.fizzbuzz(3)
+
+[
+  1,
+  2,
+  :fizz,
+  4,
+  :buzz,
+  :fizz,
+  7,
+  8,
+  :fizz,
+  :buzz,
+  11,
+  :fizz,
+  13,
+  14,
+  :fizzbuzz,
+  16,
+  17,
+  :fizz,
+  19,
+  :buzz,
+  :fizz,
+  22,
+  23,
+  :fizz,
+  :buzz,
+  26,
+  :fizz,
+  28,
+  29,
+  :fizzbuzz,
+  31
+] = FizzBuzz.fizzbuzz(31)
+```
+
+## Quick sort
+
+* If list is empty (or 1 element) list it is sorted.
+* Pick the first element of a list `fisrt`.
+* Filer smaller elements from the first element `first` of a remaining list to a list `smaller`.
+* Filer greater or equal elements from the first element `first` of a remaining list filter to a list `bigger`.
+* Sort `smaller` to `sorted_smaller`.
+* Sort `bigger` to `sorted_bigger`.
+* Return `sorted_smaller ++ [first] ++ sorted_bigger`.
+* Tip: use [`Enum.filter/2`](https://elixirschool.com/en/lessons/basics/enum/#filter).
+
+```elixir
+defmodule QuickSort do
+  def quicksort([first | remaining]) when remaining != [] do
+    {smaller, bigger} = Enum.split_with(remaining, &(&1 < first))
+    sorted_smaller = quicksort(smaller)
+    sorted_bigger = quicksort(bigger)
+
+    sorted_smaller ++ [first] ++ sorted_bigger
+  end
+
+  def quicksort(list), do: list
+end
+```
+
+```elixir
+[] = QuickSort.quicksort([])
+[1] = QuickSort.quicksort([1])
+[1, 2] = QuickSort.quicksort([1, 2])
+[1, 2] = QuickSort.quicksort([2, 1])
+```
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule QuickSort.Test do
+  use ExUnit.Case, async: false
+
+  test "Empty list is sorted" do
+    assert [] == QuickSort.quicksort([])
+  end
+
+  test "single element list is sorted" do
+    assert [1] == QuickSort.quicksort([1])
+  end
+
+  test "sorted 2 element list is sorted" do
+    assert [1, 2] == QuickSort.quicksort([1, 2])
+  end
+
+  test "unsorted 2 element list gets sorted" do
+    assert [1, 2] == QuickSort.quicksort([2, 1])
+  end
+
+  test "comperative implementation check" do
+    len = :rand.uniform(100_000)
+
+    lst = Enum.map(1..len, fn _ -> :rand.uniform(100_000) - 50_000 end)
+
+    expected = Enum.sort(lst)
+    actuall = QuickSort.quicksort(lst)
+    assert expected == actuall
+  end
+end
+
+ExUnit.run()
+```
+
+## Wordle
+
+Wordle is such a simple game that there are hardly any rules. But here you go:
+
+* You have to guess the Wordle in six goes or less
+* Every word you enter must be in the word list.
+* A correct letter turns green.
+* A correct letter in the wrong place turns yellow[*](https://nerdschalk.com/wordle-same-letter-twice-rules-explained-how-does-it-work/).
+* An incorrect letter turns gray.
+* Letters can be used more than once.
+* Word consists of 5 letters.
+
+Rules taken form [here](https://www.tomsguide.com/news/what-is-wordle).
+
+Implement a function that takes two 5 letters words (the one that needs to be guessed and your guess) and returnes
+a list of colors for each letter.
+
+Tip:
+
+```elixir
+[?a, ?s, ?d, ?f] == :binary.bin_to_list("asdf")
+```
+
+```elixir
+defmodule Wordle do
+  def color_word(actual, guess) do
+    actual_list = :binary.bin_to_list(actual)
+    guess_list = :binary.bin_to_list(guess)
+
+    actual_f = Enum.frequencies(actual_list)
+
+    {_state, result} =
+      guess_list
+      |> Enum.with_index()
+      |> Enum.reduce({%{}, []}, fn {letter, index}, {state, result} ->
+        exists? = Map.get(actual_f, letter, false)
+        number_in_actual = Map.get(actual_f, letter)
+
+        letter_state =
+          %{
+            last_yellow: last_yellow,
+            last_green: last_green,
+            counter: counter
+          } = state |> Map.get(letter) |> parse_letter_state()
+
+        cond do
+          Enum.at(actual_list, index) == letter ->
+            result = turn_last_yellow_gray(result, last_yellow)
+            to_update = Map.merge(letter_state, %{last_green: index, counter: counter + 1})
+            state = Map.put(state, letter, to_update)
+
+            {state, [:green | result]}
+
+          exists? && counter < number_in_actual && is_nil(last_green) ->
+            to_update = Map.merge(letter_state, %{last_yellow: index, counter: counter + 1})
+            state = Map.put(state, letter, to_update)
+
+            {state, [:yellow | result]}
+
+          exists? && counter < number_in_actual ->
+            to_update = Map.merge(letter_state, %{last_yellow: index, counter: counter + 1})
+            state = Map.put(state, letter, to_update)
+
+            {state, [:yellow | result]}
+
+          true ->
+            {state, [:gray | result]}
+        end
+      end)
+
+    Enum.reverse(result)
+  end
+
+  defp parse_letter_state(nil), do: %{counter: 0, last_yellow: nil, last_green: nil}
+  defp parse_letter_state(state), do: state
+
+  defp turn_last_yellow_gray(list, nil), do: list
+  defp turn_last_yellow_gray(list, last_yellow), do: List.replace_at(list, last_yellow, :gray)
+end
+```
+
+Implement remaining test cases
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Wordle.Test do
+  use ExUnit.Case, async: false
+
+  test "none of the latters match" do
+    assert [:gray, :gray, :gray, :gray, :gray] == Wordle.color_word("abcde", "fghij")
+  end
+
+  test "all of the latters match" do
+    assert [:green, :green, :green, :green, :green] == Wordle.color_word("asdfg", "asdfg")
+  end
+
+  test "a letter is in different place" do
+    assert [:green, :green, :green, :yellow, :yellow] == Wordle.color_word("abbey", "abbye")
+
+    assert [:green, :green, :yellow, :green, :yellow] == Wordle.color_word("abbey", "abyeb")
+  end
+
+  test "a letter is passed 2 times but exists once in a word both in different place" do
+    assert [:gray, :yellow, :gray, :gray, :gray] == Wordle.color_word("abbey", "keeps")
+  end
+
+  test "a letter is passed 3 times but exists once in a word all in different place" do
+    assert [:gray, :yellow, :gray, :gray, :gray] == Wordle.color_word("abbey", "keepe")
+  end
+
+  test "a letter is passed 2 times but exists once in a word and one is in the right place" do
+    assert [:gray, :gray, :gray, :green, :gray] == Wordle.color_word("abbey", "kepes")
+  end
+
+  test "a letter is passed 3 times but exists once in a word and one is in the right place" do
+    assert [:gray, :gray, :gray, :green, :gray] == Wordle.color_word("abbey", "keeep")
+  end
+
+  test "2 green, 1 yellow" do
+    assert [:green, :gray, :gray, :green, :yellow] == Wordle.color_word("abbey", "aeeeb")
+  end
+end
+
+ExUnit.run()
+```
