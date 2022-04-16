@@ -69,7 +69,7 @@ end
 
 ## Quick sort
 
-* If list is empty (or 1 element) list it is sorted.
+* If list is empty (or 1 element) list is already sorted.
 * Pick the first element of a list `fisrt`.
 * Filer smaller elements from the first element `first` of a remaining list to a list `smaller`.
 * Filer greater or equal elements from the first element `first` of a remaining list filter to a list `bigger`.
