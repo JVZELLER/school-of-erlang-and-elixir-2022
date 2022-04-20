@@ -156,22 +156,23 @@ Tip:
 
 ```elixir
 [?a, ?s, ?d, ?f] == :binary.bin_to_list("asdf")
+"asdf" |> String.graphemes()
 ```
 
 ```elixir
 defmodule Wordle do
   def color_word(actual, guess) do
-    actual_list = :binary.bin_to_list(actual)
-    guess_list = :binary.bin_to_list(guess)
+    actual_list = String.graphemes(actual)
+    guess_list = String.graphemes(guess)
 
-    actual_f = Enum.frequencies(actual_list)
+    actual_frequencies = Enum.frequencies(actual_list)
 
     {_state, result} =
       guess_list
       |> Enum.with_index()
       |> Enum.reduce({%{}, []}, fn {letter, index}, {state, result} ->
-        exists? = Map.get(actual_f, letter, false)
-        number_in_actual = Map.get(actual_f, letter)
+        exists? = Map.get(actual_frequencies, letter, false)
+        ocurrences_in_actual = Map.get(actual_frequencies, letter)
 
         letter_state =
           %{
@@ -182,19 +183,19 @@ defmodule Wordle do
 
         cond do
           Enum.at(actual_list, index) == letter ->
-            result = turn_last_yellow_gray(result, last_yellow)
+            result = maybe_turn_last_yellow_gray(result, last_yellow)
             to_update = Map.merge(letter_state, %{last_green: index, counter: counter + 1})
             state = Map.put(state, letter, to_update)
 
             {state, [:green | result]}
 
-          exists? && counter < number_in_actual && is_nil(last_green) ->
+          exists? && counter < ocurrences_in_actual && is_nil(last_green) ->
             to_update = Map.merge(letter_state, %{last_yellow: index, counter: counter + 1})
             state = Map.put(state, letter, to_update)
 
             {state, [:yellow | result]}
 
-          exists? && counter < number_in_actual ->
+          exists? && counter < ocurrences_in_actual ->
             to_update = Map.merge(letter_state, %{last_yellow: index, counter: counter + 1})
             state = Map.put(state, letter, to_update)
 
@@ -211,8 +212,10 @@ defmodule Wordle do
   defp parse_letter_state(nil), do: %{counter: 0, last_yellow: nil, last_green: nil}
   defp parse_letter_state(state), do: state
 
-  defp turn_last_yellow_gray(list, nil), do: list
-  defp turn_last_yellow_gray(list, last_yellow), do: List.replace_at(list, last_yellow, :gray)
+  defp maybe_turn_last_yellow_gray(list, nil), do: list
+
+  defp maybe_turn_last_yellow_gray(list, last_yellow),
+    do: List.replace_at(list, last_yellow, :gray)
 end
 ```
 
