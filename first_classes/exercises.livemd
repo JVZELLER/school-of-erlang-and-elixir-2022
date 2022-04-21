@@ -228,11 +228,11 @@ defmodule Wordle.Test do
   use ExUnit.Case, async: false
 
   test "none of the latters match" do
-    assert [:gray, :gray, :gray, :gray, :gray] == Wordle.color_word("abcde", "fghij")
+    assert List.duplicate(:gray, 5) == Wordle.color_word("abcde", "fghij")
   end
 
   test "all of the latters match" do
-    assert [:green, :green, :green, :green, :green] == Wordle.color_word("asdfg", "asdfg")
+    assert List.duplicate(:green, 5) == Wordle.color_word("asdfg", "asdfg")
   end
 
   test "a letter is in different place" do
