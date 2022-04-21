@@ -1,0 +1,125 @@
+# Exercises
+
+## The ring
+
+One Ring to rule them all,
+One Ring to find them,
+One Ring to bring them all and in the darkness bind them.
+
+Implement a ring of n (where n is positive integer > 2) processes,
+The 1st process is forwarding a message to the second one,
+the second one to the 3ed one etc
+
+```mermaid
+graph LR;
+      1 --> 2;
+      2 --> 3;
+      3 --> ...;
+      ... --> n;
+      n --> 1;
+
+```
+
+```elixir
+defmodule Ring do
+  def start_ring(n) when n < 2, do: {:error, "Ring must be greater thand 2!"}
+
+  def start_ring(n) when n > 2 do
+    spawn(fn ->
+      create_process(n - 1)
+
+      loop()
+    end)
+  end
+
+  defp create_process(0), do: :ok
+
+  defp create_process(n) do
+    spawn_link(fn ->
+      create_process(n - 1)
+      loop()
+    end)
+  end
+
+  defp loop do
+    current = self()
+
+    receive do
+      {:send, msg} ->
+        IO.puts("\nStarting Broadcast from process 1")
+
+        {:links, [child]} = Process.info(current, :links)
+
+        send(child, {msg, 2, {:first, current}})
+
+      {msg, process_number, {:first, first_pid}} ->
+        IO.inspect(msg, label: "Message received by process #{process_number}")
+
+        current
+        |> Process.info(:links)
+        |> case do
+          {:links, [_last]} ->
+            send(first_pid, {msg, process_number})
+
+          {:links, [_last | childs]} ->
+            childs |> List.last() |> send({msg, process_number + 1, {:first, first_pid}})
+        end
+
+      {msg, process_number} ->
+        IO.inspect(msg, label: "Process 1 received a message back from process #{process_number}")
+    end
+
+    loop()
+  end
+end
+```
+
+```elixir
+{:error, _msg} = Ring.start_ring(1)
+```
+
+```elixir
+main = Ring.start_ring(5)
+```
+
+```elixir
+send(main, {:send, "Hello"})
+
+Process.sleep(200)
+
+send(main, {:send, "Second message"})
+```
+
+## The best Wordle opening word
+
+Write a simulation where you check which is the best opening word.
+Try using multiple processes for that.
+For the sake of this exercise, let's assume that the best opening word is the one that eliminates the most possble words for the second guess.
+The algorithm would be to:
+
+1. start the `main`
+2. the `main` process reads a list of all possible words to be guessed (you will find them in the wordle_words.txt file)
+3. the `main` generates all possible 5 letters strings and for each such string starts the `checker` process.
+4. the `main` process goes to receive loop and keeps track of all of the `checker` processes as well as of the best opening word score (max of the number of words eliminated or min of numbers left)
+5. when there are no more `checker` porcesses left, the `main` process prints the result whihc is the best opening word
+
+If you strugle here search for inspiration or you want to go beond any expectations see this video: [here](https://youtu.be/v68zYyaEmEA) and then [the follow up](https://youtu.be/fRed0Xmc2Wg) one to fix the possible bug.
+
+```mermaid
+graph TB;
+      main -- start ---> checker_aaaaa;
+      main -- start ---> checker_aaaab;
+      main -- start ---> checker_aaaac;
+      main -- ... ---> ...;
+
+      checker_aaaaa -- result --> main;
+      checker_aaaab -- result --> main;
+      checker_aaaac -- result --> main;
+      ... -- ... --> main;
+      
+
+```
+
+```elixir
+
+```
