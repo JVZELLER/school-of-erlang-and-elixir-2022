@@ -1,6 +1,8 @@
+<!-- vim: set syntax=markdown: -->
 # Exercises
 
 ## The ring
+
 
 One Ring to rule them all,
 One Ring to find them,
@@ -22,11 +24,13 @@ graph LR;
 
 ```elixir
 defmodule Ring do
-  def start_ring(n) when n < 2, do: {:error, "Ring must be greater thand 2!"}
+  @spec start_ring(non_neg_integer()) :: pid() | {:error, String.t()}
+  def start_ring(number_of_process) when number_of_process < 2,
+    do: {:error, "Ring must be greater thand 2!"}
 
-  def start_ring(n) when n > 2 do
+  def start_ring(number_of_process) do
     spawn(fn ->
-      create_process(n - 1)
+      create_process(number_of_process - 1)
 
       loop()
     end)
@@ -34,9 +38,9 @@ defmodule Ring do
 
   defp create_process(0), do: :ok
 
-  defp create_process(n) do
+  defp create_process(number_of_process) do
     spawn_link(fn ->
-      create_process(n - 1)
+      create_process(number_of_process - 1)
       loop()
     end)
   end
